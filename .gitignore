@@ -1,0 +1,21 @@
+# Audio & media files
+*.wav
+*.mp3
+*.flac
+*.m4a
+
+# Spectrograms or images
+*.png
+*.jpg
+*.jpeg
+
+# Python + Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# VS Code & virtual env
+.vscode/
+venv/
+.env/
+   
