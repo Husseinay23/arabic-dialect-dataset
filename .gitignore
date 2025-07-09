@@ -3,6 +3,9 @@
 *.mp3
 *.flac
 *.m4a
+*.part
+*.webm
+*.ytdl
 
 # Spectrograms or images
 *.png
@@ -18,4 +21,3 @@ __pycache__/
 .vscode/
 venv/
 .env/
-   
