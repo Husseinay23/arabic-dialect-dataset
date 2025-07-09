@@ -1,94 +1,182 @@
-# arabic-dialect-dataset
-# 🗣️ Arabic Dialect Voice Dataset Builder 🎙️
+ # 🗣️ Arabic Dialect Speech Dataset Pipeline
 
-This repository contains a complete pipeline to **collect**, **clean**, **transcribe**, **split**, and **convert** Arabic dialect audio samples into training-ready data for machine learning models.
-
-The final goal is to build a diverse and high-quality dataset for Arabic **dialect classification** or **speech-related** deep learning tasks.
+This repository contains a complete pipeline to create a clean, labeled, and ready-to-train dataset of Arabic dialect speech audio samples extracted from YouTube. It supports multiple dialects and generates Mel spectrograms to be used in deep learning models.
 
 ---
 
-## 📦 Features
+## 🌍 Supported Dialects
 
-- ✅ YouTube audio downloader for each dialect
-- ✅ Voice Activity Detection (VAD) using WebRTC
-- ✅ Whisper-based Arabic transcription
-- ✅ Smart silence removal + padding
-- ✅ Dataset splitting: train / val / test
-- ✅ Mel Spectrogram generation (for CNN input)
-- ✅ Metadata file including all transcript & path info
+The pipeline is designed to support any number of dialects. It currently includes:
 
----
+- 🇱🇧 Lebanese
+- 🇪🇬 Egyptian
+- 🇯🇴 Jordanian
+- 🇸🇾 Syrian
+- 🇮🇶 Iraqi
+- 🇵🇸 Palestinian
+- 🇸🇦 Saudi
+- 🇦🇪 Emirati
 
-## 🧱 Dataset Structure
-
-After running the full pipeline, the folder structure for each dialect looks like this:
-
-YourDataset/
-            Lebanese/
-                     train/
-                           wav/ # Cleaned .wav clips
-                           mel/ # Mel spectrogram images (.png)
-                     val/
-                           wav/
-                           mel/
-                     test/
-                           wav/
-                           mel/
-                     Lebanese_metadata.csv 
+Each dialect has its own folder and is processed independently.
 
 ---
 
- 
-Each metadata CSV contains columns:
-- `sample_id`: unique ID
-- `filename`: name of the audio file
-- `dialect`: e.g., Lebanese, Egyptian
-- `duration`: in seconds
-- `source_url`: YouTube source
-- `start_time_ms`, `end_time_ms`: original clip location
-- `language`: Whisper-detected language
-- `avg_logprob`: average transcription confidence
-- `transcription`: Whisper output
-- `whisper_model`: model used (e.g., `base`)
-- `split`: `train`, `val`, or `test`
-- `mel_path`: spectrogram image path
+## 🛠️ Pipeline Overview
+
+### 1. 🎧 YouTube Audio Downloader
+Downloads full audio from YouTube videos using `yt-dlp`. Files are saved in a `full_audio/` folder per dialect.
+
+```python
+download_youtube_audio("https://youtube.com/...", dialect_dir="Dataset/Lebanese")
+````
+
+* Format: `.mp3`
+* Trims the first 60 seconds to skip intros
 
 ---
 
-## 🛠️ Requirements
+### 2. 🧠 Voice Activity Detection (VAD)
 
-Install the following before running the notebook:
+Applies WebRTC VAD to extract clean voice chunks (default 7 seconds each). Adds padding before and after speech.
+
+```python
+segments = vad_collector(audio)
+```
+
+* Removes silence and background noise
+* Segments are saved as `.wav` files
+* Each dialect has its own CSV metadata file
+
+---
+
+### 3. 📄 Metadata Creation
+
+Each saved segment is labeled with:
+
+* `sample_id`
+* `filename`
+* `dialect`
+* `start_time_ms`, `end_time_ms`
+* `start_time_str`, `end_time_str`
+* `source_url`
+
+**Example metadata row:**
+
+```csv
+sample_id,filename,dialect,duration_sec,start_time_ms,end_time_ms,start_time_str,end_time_str,source_url
+abc12345,lebanese_chunk_0001.wav,Lebanese,6.95,61000,68000,01:01,01:08,https://youtube.com/...
+```
+
+---
+
+### 4. 📦 Dataset Split
+
+Automatically splits each dialect dataset into:
+
+* `train` (70%)
+* `val` (15%)
+* `test` (15%)
+
+Files are **moved** to:
+
+```
+Dataset/
+└── Lebanese/
+    ├── train/wav/
+    ├── val/wav/
+    └── test/wav/
+```
+
+The metadata CSV is updated with a `split` column.
+
+---
+
+### 5. 🎼 Mel Spectrogram Generation
+
+Generates Mel spectrograms (`.png`) from `.wav` files using Librosa and Matplotlib.
+
+```python
+mel = librosa.feature.melspectrogram(y, sr=16000, n_mels=128)
+mel_db = librosa.power_to_db(mel, ref=np.max)
+```
+
+* Output saved to:
+
+  ```
+  Dataset/Lebanese/train/mel/lebanese_chunk_0001.png
+  ```
+* Metadata CSV is updated with `mel_path`
+
+
+
+---
+
+## 📁 Final Folder Structure
+
+```
+Dataset/
+├── Lebanese/
+│   ├── train/
+│   │   ├── wav/
+│   │   └── mel/
+│   ├── val/
+│   │   ├── wav/
+│   │   └── mel/
+│   ├── test/
+│   │   ├── wav/
+│   │   └── mel/
+│   └── Lebanese_metadata.csv
+├── Egyptian/
+│   └── ...
+```
+
+---
+
+## ▶️ How to Run
+
+Run the full pipeline in a Jupyter Notebook using:
+
+1. `process_multiple_youtube_links(dialect, links)`
+2. `split_all_dialects(base_dir="./Dataset")`
+3. `generate_mel_spectrograms(dialect_dir, dialect)`
+
+Or loop through all dialects:
+
+```python
+dialects = ['Lebanese', 'Egyptian', 'Jordanian', 'Syrian', 'Iraqi', 'Palestinian', 'Saudi', 'Emirati']
+for dialect in dialects:
+    generate_mel_spectrograms(os.path.join('./Dataset', dialect), dialect)
+```
+
+---
+
+## 📦 Dependencies
+
+Install with pip:
 
 ```bash
-pip install torch torchvision torchaudio
-pip install openai-whisper
-pip install pytube
-pip install pydub
-pip install webrtcvad
-pip install librosa
-pip install matplotlib
-pip install pandas scikit-learn
-brew install ffmpeg     # On macOS (for audio processing)
+pip install -r requirements.txt
+```
+
+**Main libraries:**
+
+* `yt-dlp` (for YouTube downloads)
+* `pydub` (audio processing)
+* `webrtcvad` (voice activity detection)
+* `librosa`, `matplotlib`, `numpy`, `pandas` (for spectrograms and metadata)
+* `scikit-learn` (for splitting)
 
 ---
 
- 💬 Supported Dialects
-You can customize the dataset to collect samples from the following dialects:
+## 🚀 Future Improvements
 
-🇱🇧 Lebanese
+* [ ] Save spectrograms as `.npy` arrays instead of `.png`
+* [ ] Add automatic dialect detection or label verification
+* [ ] Include command-line interface (CLI) for automation
+* [ ] Use Whisper or DeepSpeech to align transcription (optional)
 
-🇪🇬 Egyptian
+---
 
-🇸🇾 Syrian
+## 🙌 Acknowledgments
 
-🇵🇸 Palestinian
-
-🇯🇴 Jordanian
-
-🇸🇦 Saudi
-
-🇦🇪 Emirati
-
-🇮🇶 Iraqi
-
-
+This project was developed by Hussein Ayoub for academic and research purposes in Arabic speech processing and dialect AI modeling. Data is sourced from publicly available YouTube videos 
